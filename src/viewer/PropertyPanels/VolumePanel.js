@@ -1,7 +1,9 @@
 
 import * as THREE from "../../../libs/three.js/build/three.module.js";
 import {Utils} from "../../utils.js";
-import {Volume, BoxVolume, SphereVolume} from "../../utils/Volume.js";
+import {BoxVolume, SphereVolume} from "../../utils/Volume.js";
+import {Points} from "../../Points.js";
+import {LASExporter} from "../../exporter/LASExporter.js";
 
 import {MeasurePanel} from "./MeasurePanel.js";
 
@@ -89,6 +91,11 @@ export class VolumePanel extends MeasurePanel{
 					<div name="download_message"></div>
 				</li>
 
+				<li style="margin-top: 10px">
+					<button id="download_volume_las" style="width: 100%">
+						Download Filtered LAS
+					</button>
+				</li>
 
 				<!-- ACTIONS -->
 				<li style="display: grid; grid-template-columns: auto auto; grid-column-gap: 5px; margin-top: 10px">
@@ -159,12 +166,67 @@ export class VolumePanel extends MeasurePanel{
 			this.measurement.visible = event.target.checked;
 		});
 
+		this.elDownloadLas = this.elContent.find("#download_volume_las");
+		this.elDownloadLas.click(() => {
+			let points = this.getVolumePoints();
+			let buffer = LASExporter.toLAS(points);
+		
+			let blob = new Blob([buffer], { type: "application/octet-stream" });
+  			let url = URL.createObjectURL(blob);
+
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = "volume.las";
+			a.click();
+			URL.revokeObjectURL(url);
+		});
+
 		this.propertiesPanel.addVolatileListener(measurement, "position_changed", this._update);
 		this.propertiesPanel.addVolatileListener(measurement, "orientation_changed", this._update);
 		this.propertiesPanel.addVolatileListener(measurement, "scale_changed", this._update);
 		this.propertiesPanel.addVolatileListener(measurement, "clip_changed", this._update);
 
 		this.update();
+	}
+
+	getVolumePoints() {
+		const volumes = this.viewer.scene.volumes;
+	
+		const pointCloud = this.viewer.scene.pointclouds[0];
+
+		console.log("pointCloud length", pointCloud.visibleNodes.length);
+	
+		const pointNodes = pointCloud.visibleNodes.map((node, _) => {
+			return node.getPointsOutBox(volumes);
+		});
+
+		const flatPositions = pointNodes.map(node => node.positions).flat();
+    	const flatColors = pointNodes.map(node => node.colors).flat();
+
+		let tempAttributes = {};
+		pointNodes.forEach(node => {
+			for (let attributeName in node.attributes) {
+				if (!tempAttributes[attributeName]) {
+					tempAttributes[attributeName] = [];
+				}
+				tempAttributes[attributeName].push(...node.attributes[attributeName]);
+			}
+		});
+
+		let points = new Points();
+		points.boundingBox = pointCloud.boundingBox;
+		points.numPoints = flatPositions.length / 3; // 3 because xyz
+		points.data["position"] = new Float32Array(flatPositions);
+
+		if (flatColors.length > 0) {
+			points.data["rgba"] = new Uint8Array(flatColors);
+		}
+
+		for (let attributeName in tempAttributes) {
+			points.data[attributeName] = tempAttributes[attributeName];
+		}
+	
+		return points;
 	}
 
 	async download(){

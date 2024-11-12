@@ -95,6 +95,89 @@ export class PointCloudOctreeNode extends PointCloudTreeNode {
 		return inBox;
 	}
 
+	calculateObjectToBoxMatrix(sceneNode, boxNode) {
+		const worldToBox = boxNode.matrixWorld.clone().invert();
+		return new THREE.Matrix4().multiplyMatrices(
+			worldToBox,
+			sceneNode.matrixWorld
+		);
+	}
+
+	isPointOutsideBox(pos, boxNodes, sceneNode) {
+		for (let boxNode of boxNodes) {
+			const objectToBox = this.calculateObjectToBoxMatrix(sceneNode, boxNode);
+			const transformedPos = pos.clone().applyMatrix4(objectToBox);
+			if (-0.5 < transformedPos.x && transformedPos.x < 0.5 &&
+				-0.5 < transformedPos.y && transformedPos.y < 0.5 &&
+				-0.5 < transformedPos.z && transformedPos.z < 0.5) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	getAttributesForPoint(i, position, rgba, otherAttributes, sceneNode) {
+		const pos = new THREE.Vector3(position.array[3 * i], position.array[3 * i + 1], position.array[3 * i + 2]);
+		const globalPosition = pos.clone().applyMatrix4(sceneNode.matrixWorld);
+	
+		let result = {
+			position: [globalPosition.x, globalPosition.y, globalPosition.z],
+			color: [
+				rgba.array[4 * i],     // R
+				rgba.array[4 * i + 1], // G
+				rgba.array[4 * i + 2], // B
+				rgba.array[4 * i + 3]  // A
+			],
+			otherAttributes: {}
+		};
+	
+		for (let attributeName in otherAttributes) {
+			if (attributeName !== 'position' && attributeName !== 'rgba') {
+				if (!result.otherAttributes[attributeName]) {
+					result.otherAttributes[attributeName] = [];
+				}
+				result.otherAttributes[attributeName].push(otherAttributes[attributeName].array[i]);
+			}
+		}
+	
+		return result;
+	}
+
+	getPointsOutBox(boxNodes) {
+		if (!this.sceneNode) return null;
+	
+		const attributes = this.geometryNode.geometry.attributes;
+		const position = attributes.position;
+		const rgba = attributes.rgba;
+	
+		let outBoxPositions = [];
+		let outBoxColors = [];
+		let otherAttributes = {};
+	
+		for (let i = 0; i < position.count; i++) {
+			const pos = new THREE.Vector3(
+				position.array[3 * i],
+				position.array[3 * i + 1],
+				position.array[3 * i + 2]
+			);
+	
+			if (this.isPointOutsideBox(pos, boxNodes, this.sceneNode)) {
+				const attributesForPoint = this.getAttributesForPoint(i, position, rgba, attributes, this.sceneNode);
+				outBoxPositions.push(...attributesForPoint.position);
+				outBoxColors.push(...attributesForPoint.color);
+	
+				for (let attributeName in attributesForPoint.otherAttributes) {
+					if (!otherAttributes[attributeName]) {
+						otherAttributes[attributeName] = [];
+					}
+					otherAttributes[attributeName].push(...attributesForPoint.otherAttributes[attributeName]);
+				}
+			}
+		}
+	
+		return { positions: outBoxPositions, colors: outBoxColors, attributes: otherAttributes };
+	}
+
 	get name () {
 		return this.geometryNode.name;
 	}
