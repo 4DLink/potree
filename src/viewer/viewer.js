@@ -20,6 +20,7 @@ import {AnnotationTool} from "../utils/AnnotationTool.js";
 import {MeasuringTool} from "../utils/MeasuringTool.js";
 import {ProfileTool} from "../utils/ProfileTool.js";
 import {VolumeTool} from "../utils/VolumeTool.js";
+import {VolumeFilterExportTool} from '../utils/VolumeFilterExportTool.js';
 
 import {InputHandler} from "../navigation/InputHandler.js";
 import {NavigationCube} from "./NavigationCube.js";
@@ -325,6 +326,7 @@ export class Viewer extends EventDispatcher{
 		this.measuringTool = new MeasuringTool(this);
 		this.profileTool = new ProfileTool(this);
 		this.volumeTool = new VolumeTool(this);
+		this.volumeFilterExportTool = new VolumeFilterExportTool(this);
 
 		}catch(e){
 			this.onCrash(e);
