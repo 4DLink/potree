@@ -216,7 +216,7 @@ export class VolumePanel extends MeasurePanel{
 		let points = new Points();
 		points.boundingBox = pointCloud.boundingBox;
 		points.numPoints = flatPositions.length / 3; // 3 because xyz
-		points.data["position"] = new Float32Array(flatPositions);
+		points.data["position"] = new Float64Array(flatPositions);
 
 		if (flatColors.length > 0) {
 			points.data["rgba"] = new Uint8Array(flatColors);
