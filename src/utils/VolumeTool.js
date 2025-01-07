@@ -3,6 +3,8 @@ import * as THREE from "../../libs/three.js/build/three.module.js";
 import {Volume, BoxVolume} from "./Volume.js";
 import {Utils} from "../utils.js";
 import { EventDispatcher } from "../EventDispatcher.js";
+import { CSVExporter } from "../exporter/CSVExporter.js";
+import { Points } from "../Points.js";
 
 export class VolumeTool extends EventDispatcher{
 	constructor (viewer) {
@@ -164,4 +166,33 @@ export class VolumeTool extends EventDispatcher{
 		renderer.setRenderTarget(oldTarget);
 	}
 
+	collectPointsFromVolume(volume, pointCloud) {
+		const pointNodes = pointCloud.visibleNodes.map((node, _) => {
+			return node.getPointsInBox(volume);
+		});
+
+		const flatNodes = pointNodes.flat();
+		let points = new Points();
+		points.numPoints = flatNodes.length / 3; // 3 because xyz
+		points.data["position"] = new Float64Array(flatNodes);
+
+		return points;
+	}
+
+	exportVolumePointsToCSV() {
+        const volumes = this.viewer.scene.volumes;
+        const pointCloud = this.viewer.scene.pointclouds[0];
+
+        let urls = [];
+
+        for (let volume of volumes) {
+            let points = this.collectPointsFromVolume(volume, pointCloud);
+
+            let string = CSVExporter.toString(points);
+            let blob = new Blob([string], { type: "text/csv;charset=utf-8" });
+            let url = URL.createObjectURL(blob);
+            urls.push(url);
+        }
+        return urls;
+    }
 }
