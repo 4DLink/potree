@@ -62,31 +62,39 @@ export class PointCloudOctreeNode extends PointCloudTreeNode {
 			return null;
 		}
 
-		let buffer = this.geometryNode.buffer;
-
-		let posOffset = buffer.offset("position");
-		let stride = buffer.stride;
-		let view = new DataView(buffer.data);
-
-		let worldToBox = boxNode.matrixWorld.clone().invert();
-		let objectToBox = new THREE.Matrix4().multiplyMatrices(worldToBox, this.sceneNode.matrixWorld);
+		const attributes = this.geometryNode.geometry.attributes;
+		const position = attributes.position;
+		const worldToBox = boxNode.matrixWorld.clone().invert();
+		const objectToBox = new THREE.Matrix4().multiplyMatrices(
+			worldToBox,
+			this.sceneNode.matrixWorld
+		);
 
 		let inBox = [];
 
-		let pos = new THREE.Vector4();
-		for(let i = 0; i < buffer.numElements; i++){
-			let x = view.getFloat32(i * stride + posOffset + 0, true);
-			let y = view.getFloat32(i * stride + posOffset + 4, true);
-			let z = view.getFloat32(i * stride + posOffset + 8, true);
+		for (let i = 0; i < position.count; i++) {
+			const pos = new THREE.Vector3();
+			const arr = position.array;
+			const x = arr[3 * i];
+			const y = arr[3 * i + 1];
+			const z = arr[3 * i + 2];
 
-			pos.set(x, y, z, 1);
+			pos.set(x, y, z);
+
 			pos.applyMatrix4(objectToBox);
 
-			if(-0.5 < pos.x && pos.x < 0.5){
-				if(-0.5 < pos.y && pos.y < 0.5){
-					if(-0.5 < pos.z && pos.z < 0.5){
-						pos.set(x, y, z, 1).applyMatrix4(this.sceneNode.matrixWorld);
-						inBox.push(new THREE.Vector3(pos.x, pos.y, pos.z));
+			if (-0.5 < pos.x && pos.x < 0.5) {
+				if (-0.5 < pos.y && pos.y < 0.5) {
+					if (-0.5 < pos.z && pos.z < 0.5) {
+						let point = new THREE.Vector3(x, y, z);
+						point.applyMatrix4(this.sceneNode.matrixWorld);
+						position.array[3 * i] = point.x;
+						position.array[3 * i + 1] = point.y;
+						position.array[3 * i + 2] = point.z;
+
+						inBox.push(position.array[3 * i]);
+						inBox.push(position.array[3 * i + 1]);
+						inBox.push(position.array[3 * i + 2]);
 					}
 				}
 			}
