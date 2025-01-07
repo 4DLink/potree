@@ -180,19 +180,19 @@ export class VolumeTool extends EventDispatcher{
 	}
 
 	exportVolumePointsToCSV() {
-        const volumes = this.viewer.scene.volumes;
-        const pointCloud = this.viewer.scene.pointclouds[0];
+		const volumes = this.viewer.scene.volumes;
+		const pointCloud = this.viewer.scene.pointclouds[0];
 
-        let urls = [];
+		let urls = [];
 
-        for (let volume of volumes) {
-            let points = this.collectPointsFromVolume(volume, pointCloud);
+		for (let volume of volumes) {
+			let points = this.collectPointsFromVolume(volume, pointCloud);
 
-            let string = CSVExporter.toString(points);
-            let blob = new Blob([string], { type: "text/csv;charset=utf-8" });
-            let url = URL.createObjectURL(blob);
-            urls.push(url);
-        }
-        return urls;
-    }
+			let string = CSVExporter.toString(points);
+			let blob = new Blob([string], { type: "text/csv;charset=utf-8" });
+			let url = URL.createObjectURL(blob);
+			urls.push(url);
+		}
+		return urls;
+	}
 }
